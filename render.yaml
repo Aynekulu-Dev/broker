@@ -1,0 +1,43 @@
+services:
+  # Redis / Key Value cache (FR-07)
+  - type: keyvalue
+    name: broker-redis
+    plan: free
+    ipAllowList: []
+
+  # NestJS backend API
+  - type: web
+    name: broker-backend
+    runtime: node
+    rootDir: broker-backend
+    plan: free
+    buildCommand: npm install && npm run build && npm run db:migrate
+    startCommand: npm run start:prod
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: REDIS_URL
+        fromService:
+          name: broker-redis
+          type: keyvalue
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: TELEGRAM_ADMIN_CHAT_ID
+        sync: false
+      - key: PORT
+        value: 3001
+
+  # Next.js frontend
+  - type: web
+    name: broker-frontend
+    runtime: node
+    rootDir: broker-frontend
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm run start
+    envVars:
+      - key: NEXT_PUBLIC_API_URL
+        sync: false
