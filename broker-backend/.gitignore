@@ -1,0 +1,27 @@
+# ReCode local database
+.recode
+
+# Secrets — never commit real credentials
+.env
+.env.local
+.env.*.local
+
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Uploaded files (receipts/photos) — should live in S3/R2 in production,
+# not in the repo. Keep the folder structure but not its contents.
+uploads/receipts/*
+!uploads/receipts/.gitkeep
+uploads/products/*
+!uploads/products/.gitkeep
+
+# Logs
+npm-debug.log*
+*.log
+
+# OS
+.DS_Store

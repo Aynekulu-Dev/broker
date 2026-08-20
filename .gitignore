@@ -1,0 +1,36 @@
+# ReCode local database
+.recode
+
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Build output
+dist/
+**/dist/
+.next/
+**/.next/
+tsconfig.tsbuildinfo
+**/tsconfig.tsbuildinfo
+
+# Secrets
+.env
+.env.local
+.env.*.local
+**/.env
+**/.env.local
+**/.env.*.local
+
+# Uploaded files
+uploads/receipts/*
+!uploads/receipts/.gitkeep
+uploads/products/*
+!uploads/products/.gitkeep
+
+# Logs
+npm-debug.log*
+*.log
+
+# OS
+.DS_Store
+*.zip

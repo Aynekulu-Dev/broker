@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1787202478362,
+      "tag": "0000_uneven_slapstick",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1787208809715,
+      "tag": "0001_cheerful_clint_barton",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1787220401823,
+      "tag": "0002_multi_order_deliveries",
+      "breakpoints": true
+    }
+  ]
+}
