@@ -125,7 +125,11 @@ export const api = {
   },
 
   // ---- Orders ----
-  createOrder: (payload: { items: { productId: string; quantity: number }[]; paymentReceiptUrl: string }) =>
+  // paymentReceiptUrl is optional: batch-capacity products (see
+  // Product.batchCapacity) reserve a spot on the truck without paying up
+  // front — the receipt is only required later via submitPayment, once
+  // the truck is full and the admin has requested payment.
+  createOrder: (payload: { items: { productId: string; quantity: number }[]; paymentReceiptUrl?: string }) =>
     request<any>('/orders', { method: 'POST', body: JSON.stringify(payload) }),
   myOrders: () => request<any[]>('/orders/mine'),
   allOrders: () => request<any[]>('/orders'),
@@ -138,6 +142,13 @@ export const api = {
     request<any>(`/orders/${id}`, { method: 'PATCH', body: JSON.stringify({ items }) }),
   // Admin: remove a mistaken/duplicate order (blocked once DISPATCHED)
   deleteOrder: (id: string) => request<{ deleted: true }>(`/orders/${id}`, { method: 'DELETE' }),
+  // Customer: upload the receipt once an order is AWAITING_PAYMENT
+  // (the truck it's riding on is full and the admin has asked riders to pay).
+  submitPayment: (orderId: string, paymentReceiptUrl: string) =>
+    request<any>(`/orders/${orderId}/submit-payment`, {
+      method: 'PATCH',
+      body: JSON.stringify({ paymentReceiptUrl }),
+    }),
 
   // ---- Deliveries ----
   // One vehicle/driver can carry several orders — pass all their ids.
@@ -148,6 +159,21 @@ export const api = {
     driverPhone: string;
   }) => request<any>('/deliveries', { method: 'POST', body: JSON.stringify(payload) }),
   trackDelivery: (orderId: string) => request<any>(`/deliveries/order/${orderId}`),
+  // Admin: batch (truck-load consolidation) management.
+  listBatches: (status?: string) =>
+    request<any[]>(`/deliveries${status ? `?status=${status}` : ''}`),
+  // Pre-open a COLLECTING batch for a product ahead of orders coming in,
+  // optionally overriding its default capacity for this particular truck.
+  startBatch: (productId: string, capacity?: number) =>
+    request<any>('/deliveries/batch', { method: 'POST', body: JSON.stringify({ productId, capacity }) }),
+  // Truck reached capacity (FULL) — ask every rider to pay now.
+  requestPayment: (deliveryId: string) =>
+    request<any>(`/deliveries/${deliveryId}/request-payment`, { method: 'PATCH' }),
+  // Every rider APPROVED/REJECTED — record driver/vehicle and dispatch.
+  dispatchBatch: (
+    deliveryId: string,
+    payload: { vehiclePlateNumber: string; driverName: string; driverPhone: string },
+  ) => request<any>(`/deliveries/${deliveryId}/dispatch`, { method: 'PATCH', body: JSON.stringify(payload) }),
 
   // ---- Ledgers ----
   myLedger: () => request<{ entries: any[]; currentBalance: string }>('/ledgers/mine'),

@@ -8,7 +8,11 @@ import { desc, eq, inArray, sql } from 'drizzle-orm';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { DB } from '../../db/db.module';
 import * as schema from '../../db/schema';
-import { CreateOrderDto, UpdateOrderDto } from './dto/order.dto';
+import {
+  CreateOrderDto,
+  SubmitPaymentDto,
+  UpdateOrderDto,
+} from './dto/order.dto';
 import { TelegramService } from '../../common/telegram.service';
 
 /**
@@ -27,9 +31,15 @@ export class OrdersService {
   ) {}
 
   /**
-   * FR-03: cart submission + mandatory receipt.
+   * FR-03: cart submission.
    * Rejects the whole submission if any cart item has gone out of stock
    * between browsing and checkout, so the merchant can adjust the cart.
+   *
+   * Batching: an order that is *only* for one batchCapacity product
+   * (e.g. jerricans of a specific oil) joins a truck-load instead of
+   * requiring payment up front — see joinBatch below. Mixed-cart or
+   * non-batched orders keep the original pay-with-receipt-now flow, so
+   * paymentReceiptUrl is required in that case.
    */
   async create(customerId: string, dto: CreateOrderDto) {
     const productIds = dto.items.map((i) => i.productId);
@@ -54,6 +64,19 @@ export class OrdersService {
       totalAmount += Number(price) * item.quantity;
     }
 
+    // Single-product cart against a batchCapacity product => batch flow.
+    const batchProduct =
+      dto.items.length === 1
+        ? products.find((p) => p.id === dto.items[0].productId)
+        : undefined;
+    const isBatched = !!batchProduct?.batchCapacity;
+
+    if (!isBatched && !dto.paymentReceiptUrl) {
+      throw new BadRequestException(
+        'paymentReceiptUrl is required for this product',
+      );
+    }
+
     // Everything below must succeed or fail together: an order without
     // its items, or an order without its ledger debit, would silently
     // corrupt the merchant's balance. We also serialize on the customer
@@ -66,7 +89,7 @@ export class OrdersService {
         .values({
           customerId,
           totalAmount: totalAmount.toFixed(2),
-          paymentReceiptUrl: dto.paymentReceiptUrl,
+          paymentReceiptUrl: isBatched ? undefined : dto.paymentReceiptUrl,
           status: 'PENDING',
         })
         .returning();
@@ -79,6 +102,15 @@ export class OrdersService {
           unitPrice: priceByProduct.get(item.productId) as string,
         })),
       );
+
+      if (isBatched && batchProduct) {
+        await this.joinBatch(
+          tx,
+          order.id,
+          batchProduct,
+          dto.items[0].quantity,
+        );
+      }
 
       // FR-06: debit the merchant's running ledger for the order total.
       const previousBalance = await this.getBalanceForUpdate(tx, customerId);
@@ -112,6 +144,67 @@ export class OrdersService {
     return this.findOne(orderId);
   }
 
+  /**
+   * Assigns a newly-created order to the product's active COLLECTING
+   * batch (creating one if needed), then flips the batch to FULL once
+   * its capacity is reached.
+   *
+   * Locked per-product (advisory tx lock) so two customers ordering the
+   * same product at the same instant can't both read "batch not full
+   * yet" and overshoot the truck's capacity.
+   */
+  private async joinBatch(
+    tx: Queryable,
+    orderId: string,
+    product: schema.Product,
+    quantity: number,
+  ) {
+    await tx.execute(
+      sql`SELECT pg_advisory_xact_lock(hashtext(${product.id}::text))`,
+    );
+
+    let [batch] = await tx
+      .select()
+      .from(schema.deliveries)
+      .where(
+        sql`${schema.deliveries.productId} = ${product.id} AND ${schema.deliveries.status} = 'COLLECTING'`,
+      )
+      .limit(1);
+
+    if (!batch) {
+      [batch] = await tx
+        .insert(schema.deliveries)
+        .values({
+          productId: product.id,
+          capacity: product.batchCapacity,
+          status: 'COLLECTING',
+        })
+        .returning();
+    }
+
+    await tx
+      .update(schema.orders)
+      .set({ deliveryId: batch.id })
+      .where(eq(schema.orders.id, orderId));
+
+    const [{ loaded }] = await tx
+      .select({
+        loaded: sql<string>`COALESCE(SUM(${schema.orderItems.quantity}), 0)`,
+      })
+      .from(schema.orderItems)
+      .innerJoin(schema.orders, eq(schema.orderItems.orderId, schema.orders.id))
+      .where(
+        sql`${schema.orders.deliveryId} = ${batch.id} AND ${schema.orders.status} != 'REJECTED'`,
+      );
+
+    if (batch.capacity && Number(loaded) >= batch.capacity) {
+      await tx
+        .update(schema.deliveries)
+        .set({ status: 'FULL', filledAt: new Date() })
+        .where(eq(schema.deliveries.id, batch.id));
+    }
+  }
+
   async findAll() {
     return this.db.query.orders.findMany({
       with: { customer: true, items: { with: { product: true } }, delivery: true },
@@ -136,9 +229,61 @@ export class OrdersService {
     return order;
   }
 
-  /** Admin reviews the receipt and approves (FR-04). */
+  /**
+   * Customer: upload the payment receipt once their batch has become
+   * FULL and the admin has requested payment (order status
+   * AWAITING_PAYMENT — see DeliveriesService.requestPayment). Moves the
+   * order to PAYMENT_SUBMITTED, ready for the same admin review step
+   * the old up-front-receipt flow used.
+   */
+  async submitPayment(orderId: string, customerId: string, dto: SubmitPaymentDto) {
+    const [order] = await this.db
+      .select()
+      .from(schema.orders)
+      .where(eq(schema.orders.id, orderId));
+    if (!order) throw new NotFoundException('Order not found');
+    if (order.customerId !== customerId) {
+      throw new BadRequestException('This order does not belong to you');
+    }
+    if (order.status !== 'AWAITING_PAYMENT') {
+      throw new BadRequestException(
+        `Order is ${order.status} — payment can't be submitted right now`,
+      );
+    }
+
+    await this.db
+      .update(schema.orders)
+      .set({ paymentReceiptUrl: dto.paymentReceiptUrl, status: 'PAYMENT_SUBMITTED' })
+      .where(eq(schema.orders.id, orderId));
+
+    await this.telegram.notifyAdmin(
+      `💰 Payment receipt submitted for order \`${orderId}\`. Please review.`,
+    );
+
+    return this.findOne(orderId);
+  }
+
+  /**
+   * Admin reviews the receipt and approves (FR-04). Works for both the
+   * ordinary flow (PENDING + receipt attached at creation) and the
+   * batch flow (PAYMENT_SUBMITTED, receipt attached via submitPayment).
+   */
   async approve(id: string) {
-    await this.ensurePending(id);
+    const [order] = await this.db
+      .select()
+      .from(schema.orders)
+      .where(eq(schema.orders.id, id));
+    if (!order) throw new NotFoundException('Order not found');
+    if (order.status !== 'PENDING' && order.status !== 'PAYMENT_SUBMITTED') {
+      throw new BadRequestException(
+        `Order is already ${order.status}, cannot change status`,
+      );
+    }
+    if (!order.paymentReceiptUrl) {
+      throw new BadRequestException(
+        'Cannot approve an order with no payment receipt on file',
+      );
+    }
     await this.db
       .update(schema.orders)
       .set({ status: 'APPROVED' })
@@ -151,7 +296,7 @@ export class OrdersService {
    * matching credit so the merchant's balance nets back out (FR-06).
    */
   async reject(id: string, reason: string) {
-    const order = await this.ensurePending(id);
+    const order = await this.ensureRejectable(id);
     const reversal = Number(order.totalAmount);
 
     await this.db.transaction(async (tx) => {
@@ -172,6 +317,12 @@ export class OrdersService {
         balance: (previousBalance - reversal).toFixed(2),
       });
     });
+
+    // If this order was still riding on an open (COLLECTING/FULL) batch,
+    // dropping it may pull the batch back under capacity.
+    if (order.deliveryId) {
+      await this.recomputeBatchAfterOrderChange(order.deliveryId);
+    }
 
     await this.telegram.notifyAdmin(
       `❌ Order \`${id}\` rejected. Reason: ${reason}`,
@@ -263,8 +414,15 @@ export class OrdersService {
       );
     }
 
+    const liveDebitStatuses = [
+      'PENDING',
+      'AWAITING_PAYMENT',
+      'PAYMENT_SUBMITTED',
+      'APPROVED',
+    ];
+
     await this.db.transaction(async (tx) => {
-      if (order.status === 'PENDING' || order.status === 'APPROVED') {
+      if (liveDebitStatuses.includes(order.status)) {
         const reversal = Number(order.totalAmount);
         const previousBalance = await this.getBalanceForUpdate(tx, order.customerId);
         await tx.insert(schema.ledgers).values({
@@ -284,6 +442,10 @@ export class OrdersService {
       await tx.delete(schema.orders).where(eq(schema.orders.id, id));
     });
 
+    if (order.deliveryId) {
+      await this.recomputeBatchAfterOrderChange(order.deliveryId);
+    }
+
     return { deleted: true };
   }
 
@@ -299,6 +461,58 @@ export class OrdersService {
       );
     }
     return order;
+  }
+
+  /** Reject is allowed any time before the order has actually been
+   * paid-and-approved or shipped — including while a batched order is
+   * still reserving a spot, awaiting payment, or under review. */
+  private async ensureRejectable(id: string) {
+    const [order] = await this.db
+      .select()
+      .from(schema.orders)
+      .where(eq(schema.orders.id, id));
+    if (!order) throw new NotFoundException('Order not found');
+    const rejectable = ['PENDING', 'AWAITING_PAYMENT', 'PAYMENT_SUBMITTED'];
+    if (!rejectable.includes(order.status)) {
+      throw new BadRequestException(
+        `Order is already ${order.status}, cannot change status`,
+      );
+    }
+    return order;
+  }
+
+  /**
+   * After an order is rejected/removed, its batch may have dropped back
+   * under capacity. Only COLLECTING/FULL batches are touched — once
+   * payment has been requested (or the truck dispatched) the batch is
+   * locked in, since customers may already be mid-payment.
+   */
+  private async recomputeBatchAfterOrderChange(deliveryId: string) {
+    const [batch] = await this.db
+      .select()
+      .from(schema.deliveries)
+      .where(eq(schema.deliveries.id, deliveryId));
+    if (!batch || (batch.status !== 'COLLECTING' && batch.status !== 'FULL')) {
+      return;
+    }
+
+    const [{ loaded }] = await this.db
+      .select({
+        loaded: sql<string>`COALESCE(SUM(${schema.orderItems.quantity}), 0)`,
+      })
+      .from(schema.orderItems)
+      .innerJoin(schema.orders, eq(schema.orderItems.orderId, schema.orders.id))
+      .where(
+        sql`${schema.orders.deliveryId} = ${deliveryId} AND ${schema.orders.status} != 'REJECTED'`,
+      );
+
+    const stillFull = batch.capacity != null && Number(loaded) >= batch.capacity;
+    if (batch.status === 'FULL' && !stillFull) {
+      await this.db
+        .update(schema.deliveries)
+        .set({ status: 'COLLECTING', filledAt: null })
+        .where(eq(schema.deliveries.id, deliveryId));
+    }
   }
 
   /**

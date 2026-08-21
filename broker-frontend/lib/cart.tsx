@@ -8,6 +8,10 @@ export type CartItem = {
   price: string;
   photoUrl: string;
   quantity: number;
+  // Truck-load consolidation threshold, carried over from Product. When
+  // set, this item belongs to the reserve-now-pay-later batch flow (see
+  // checkout page) instead of the ordinary pay-with-receipt-now flow.
+  batchCapacity?: number | null;
 };
 
 type CartContextValue = {

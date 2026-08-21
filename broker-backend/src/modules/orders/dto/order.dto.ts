@@ -3,6 +3,7 @@ import {
   ArrayMinSize,
   IsArray,
   IsNumber,
+  IsOptional,
   IsString,
   IsUUID,
   Min,
@@ -25,6 +26,18 @@ export class CreateOrderDto {
   @Type(() => OrderItemDto)
   items: OrderItemDto[];
 
+  // Optional now: orders for a batch-capacity product (see
+  // products.batchCapacity) reserve a spot on the truck without paying
+  // up front — the receipt is only required later, once the truck is
+  // full and payment is requested (see SubmitPaymentDto). Orders for
+  // ordinary (non-batched) products should still include it here.
+  @IsOptional()
+  @IsString()
+  paymentReceiptUrl?: string;
+}
+
+/** Customer: upload the receipt once an order is AWAITING_PAYMENT. */
+export class SubmitPaymentDto {
   @IsString()
   paymentReceiptUrl: string;
 }

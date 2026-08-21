@@ -5,7 +5,65 @@ import { api, ApiError } from '@/lib/api';
 import { RequireAuth } from '@/components/RequireAuth';
 import { TopBar, CustomerNav } from '@/components/TopBar';
 import { StatusPill } from '@/components/StatusPill';
-import { Button, Card, EmptyState, LoadingRow } from '@/components/ui';
+import { Button, Card, EmptyState, ErrorBanner, LoadingRow } from '@/components/ui';
+
+// Shown once an order's truck is FULL and the admin has requested
+// payment (order status AWAITING_PAYMENT) — lets the merchant attach
+// their receipt now, same upload step as the ordinary checkout flow.
+function PayNowCard({ order, onPaid }: { order: any; onPaid: () => void }) {
+  const [file, setFile] = useState<File | null>(null);
+  const [preview, setPreview] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState('');
+
+  function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    setFile(f);
+    setPreview(URL.createObjectURL(f));
+  }
+
+  async function submit() {
+    if (!file) {
+      setError('እባክዎ የክፍያ ደረሰኝ ፎቶ ያያይዙ');
+      return;
+    }
+    setError('');
+    setUploading(true);
+    try {
+      const { url } = await api.uploadReceipt(file);
+      await api.submitPayment(order.id, url);
+      onPaid();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'ደረሰኝ መላክ አልተቻለም');
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  return (
+    <div className="bg-paper border border-dashed border-stamp-red rounded-[10px] p-3 mt-2.5 text-[13px]">
+      <div className="font-bold mb-1.5">💰 መኪናው ሞልቷል — ክፍያ ይላኩ</div>
+      <p className="hint mb-2.5">ወደ ባንክ ሂሳብ ከተላከ በኋላ ደረሰኙን በፎቶ ያንሱ እና እዚህ ያያይዙ</p>
+      <ErrorBanner message={error} />
+      {preview && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={preview}
+          alt="receipt preview"
+          className="w-full max-h-[180px] object-contain rounded-[10px] mb-2.5 border border-paper-line"
+        />
+      )}
+      <label className="btn btn-outline btn-block inline-flex cursor-pointer">
+        {file ? 'ፎቶ ቀይር' : 'ፎቶ ይምረጡ'}
+        <input type="file" accept="image/*" hidden onChange={onFileChange} />
+      </label>
+      <Button variant="primary" block className="mt-2.5" disabled={uploading} onClick={submit}>
+        {uploading ? 'በመላክ ላይ...' : 'ደረሰኝ ላክ'}
+      </Button>
+    </div>
+  );
+}
 
 function OrdersInner() {
   const [orders, setOrders] = useState<any[]>([]);
@@ -64,6 +122,16 @@ function OrdersInner() {
             <div className="text-[13px] text-ink-soft mb-2.5">
               {order.items?.map((i: any) => `${i.product?.name} ×${i.quantity}`).join('፣ ')}
             </div>
+
+            {order.status === 'AWAITING_PAYMENT' && (
+              <PayNowCard order={order} onPaid={load} />
+            )}
+
+            {order.status === 'PAYMENT_SUBMITTED' && (
+              <div className="bg-paper border border-dashed border-ochre rounded-[10px] p-3 text-[13px]">
+                ደረሰኝዎ ተልኳል — በአስተዳዳሪ በግምገማ ላይ ነው።
+              </div>
+            )}
 
             {order.status === 'DISPATCHED' && (
               <div className="bg-paper border border-dashed border-ochre rounded-[10px] p-3 text-[13px]">

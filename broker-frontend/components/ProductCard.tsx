@@ -11,6 +11,9 @@ export type Product = {
   description?: string;
   photoUrl: string;
   isInStock: boolean;
+  // Truck-load consolidation threshold (e.g. 600 jerricans). Set only
+  // for products that use the reserve-now-pay-when-full batch flow.
+  batchCapacity?: number | null;
 };
 
 export function ProductCard({ product }: { product: Product }) {
@@ -36,6 +39,11 @@ export function ProductCard({ product }: { product: Product }) {
             {product.description}
           </div>
         )}
+        {!!product.batchCapacity && (
+          <div className="text-[11px] font-semibold text-ink-navy mt-1">
+            🚚 ማስያዣ — መኪናው ሲሞላ ብቻ ይከፍላሉ
+          </div>
+        )}
 
         <div className="flex items-center justify-between mt-2.5">
           <span className="money text-base text-ochre-deep">
@@ -59,6 +67,7 @@ export function ProductCard({ product }: { product: Product }) {
                   name: product.name,
                   price: product.price,
                   photoUrl: product.photoUrl,
+                  batchCapacity: product.batchCapacity,
                 })
               }
             >

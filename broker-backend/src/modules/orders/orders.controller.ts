@@ -1,6 +1,11 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
 import { OrdersService } from './orders.service';
-import { CreateOrderDto, RejectOrderDto, UpdateOrderDto } from './dto/order.dto';
+import {
+  CreateOrderDto,
+  RejectOrderDto,
+  SubmitPaymentDto,
+  UpdateOrderDto,
+} from './dto/order.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { Roles, RolesGuard } from '../../common/guards/roles.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
@@ -33,6 +38,17 @@ export class OrdersController {
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.ordersService.findOne(id);
+  }
+
+  // Customer: upload receipt once the truck is full and admin has
+  // requested payment (order status AWAITING_PAYMENT).
+  @Patch(':id/submit-payment')
+  submitPayment(
+    @Param('id') id: string,
+    @CurrentUser() user: { sub: string },
+    @Body() dto: SubmitPaymentDto,
+  ) {
+    return this.ordersService.submitPayment(id, user.sub, dto);
   }
 
   @UseGuards(RolesGuard)

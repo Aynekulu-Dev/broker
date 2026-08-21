@@ -20,6 +20,8 @@ function ProductFields({
   photoUrl,
   onPhoto,
   uploading,
+  batchCapacity,
+  setBatchCapacity,
 }: {
   name: string;
   setName: (v: string) => void;
@@ -32,6 +34,8 @@ function ProductFields({
   photoUrl: string;
   onPhoto: (e: React.ChangeEvent<HTMLInputElement>) => void;
   uploading: boolean;
+  batchCapacity: string;
+  setBatchCapacity: (v: string) => void;
 }) {
   return (
     <>
@@ -51,6 +55,13 @@ function ProductFields({
         value={description}
         onChange={(e) => setDescription(e.target.value)}
       />
+      <Field
+        label="🚚 የመኪና አቅም (ጀሪካን/ብዛት) — ባዶ ተው ካልባች ምርት"
+        type="number"
+        min={1}
+        value={batchCapacity}
+        onChange={(e) => setBatchCapacity(e.target.value)}
+      />
       <div className="field">
         <label>ፎቶ</label>
         {photoUrl && <Thumbnail photoUrl={photoUrl} alt="" size={72} />}
@@ -69,6 +80,7 @@ function NewProductForm({ onCreated }: { onCreated: () => void }) {
   const [price, setPrice] = useState('');
   const [description, setDescription] = useState('');
   const [photoUrl, setPhotoUrl] = useState('');
+  const [batchCapacity, setBatchCapacity] = useState('');
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -90,12 +102,20 @@ function NewProductForm({ onCreated }: { onCreated: () => void }) {
     setSaving(true);
     setError('');
     try {
-      await api.createProduct({ name, category, price, description, photoUrl });
+      await api.createProduct({
+        name,
+        category,
+        price,
+        description,
+        photoUrl,
+        batchCapacity: batchCapacity ? Number(batchCapacity) : undefined,
+      });
       setName('');
       setCategory('');
       setPrice('');
       setDescription('');
       setPhotoUrl('');
+      setBatchCapacity('');
       setOpen(false);
       onCreated();
     } catch (err) {
@@ -129,6 +149,8 @@ function NewProductForm({ onCreated }: { onCreated: () => void }) {
           photoUrl={photoUrl}
           onPhoto={onPhoto}
           uploading={uploading}
+          batchCapacity={batchCapacity}
+          setBatchCapacity={setBatchCapacity}
         />
         <div className="flex gap-2">
           <Button type="button" variant="outline" flex onClick={() => setOpen(false)}>
@@ -159,6 +181,9 @@ function EditProductModal({
   const [price, setPrice] = useState(String(product.price));
   const [description, setDescription] = useState(product.description || '');
   const [photoUrl, setPhotoUrl] = useState(product.photoUrl);
+  const [batchCapacity, setBatchCapacity] = useState(
+    product.batchCapacity ? String(product.batchCapacity) : '',
+  );
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -181,7 +206,14 @@ function EditProductModal({
     setSaving(true);
     setError('');
     try {
-      await api.updateProduct(product.id, { name, category, price, description, photoUrl });
+      await api.updateProduct(product.id, {
+        name,
+        category,
+        price,
+        description,
+        photoUrl,
+        batchCapacity: batchCapacity ? Number(batchCapacity) : undefined,
+      });
       onSaved();
       onClose();
     } catch (err) {
@@ -223,6 +255,8 @@ function EditProductModal({
           photoUrl={photoUrl}
           onPhoto={onPhoto}
           uploading={uploading}
+          batchCapacity={batchCapacity}
+          setBatchCapacity={setBatchCapacity}
         />
         <div className="flex gap-2">
           <Button type="button" variant="outline" flex onClick={onClose}>
@@ -345,6 +379,11 @@ function ProductsInner() {
                 <div className="money text-ochre-deep mt-0.5">
                   {Number(p.price).toLocaleString()} ብር
                 </div>
+                {!!p.batchCapacity && (
+                  <div className="text-[11px] font-semibold text-ink-navy mt-0.5">
+                    🚚 ባች አቅም: {p.batchCapacity}
+                  </div>
+                )}
               </div>
             </div>
 

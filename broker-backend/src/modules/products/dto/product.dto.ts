@@ -1,4 +1,4 @@
-import { IsBoolean, IsNumberString, IsOptional, IsString } from 'class-validator';
+import { IsBoolean, IsInt, IsNumberString, IsOptional, IsString, Min } from 'class-validator';
 
 export class CreateProductDto {
   @IsString()
@@ -16,6 +16,13 @@ export class CreateProductDto {
 
   @IsString()
   photoUrl: string;
+
+  // Truck-load consolidation threshold (e.g. 600 jerricans). Leave unset
+  // for products that use the ordinary pay-up-front flow.
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  batchCapacity?: number;
 }
 
 export class UpdateProductDto {
@@ -38,6 +45,11 @@ export class UpdateProductDto {
   @IsOptional()
   @IsString()
   photoUrl?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  batchCapacity?: number;
 }
 
 export class ToggleStockDto {

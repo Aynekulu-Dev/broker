@@ -1,5 +1,7 @@
 const LABELS: Record<string, string> = {
   PENDING: 'በመጠባበቅ ላይ',
+  AWAITING_PAYMENT: 'ክፍያ ይጠበቃል',
+  PAYMENT_SUBMITTED: 'ክፍያ በግምገማ ላይ',
   APPROVED: 'ጸድቋል',
   REJECTED: 'ውድቅ ተደርጓል',
   DISPATCHED: 'ተልኳል',

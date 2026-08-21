@@ -18,6 +18,12 @@ function CheckoutInner() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
+  // A cart with exactly one batch-capacity product (e.g. jerricans of a
+  // specific oil) reserves a spot on the truck instead of paying now —
+  // no receipt required at this step. Mixed carts, or non-batched
+  // products, keep the ordinary pay-with-receipt-now flow.
+  const isBatchOrder = items.length === 1 && !!items[0].batchCapacity;
+
   function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -26,20 +32,24 @@ function CheckoutInner() {
   }
 
   async function submitOrder() {
-    if (!receiptFile) {
+    if (!isBatchOrder && !receiptFile) {
       setError('እባክዎ የክፍያ ደረሰኝ ፎቶ ያያይዙ');
       return;
     }
     setError('');
     setSubmitting(true);
     try {
-      setUploading(true);
-      const { url } = await api.uploadReceipt(receiptFile);
-      setUploading(false);
+      let paymentReceiptUrl: string | undefined;
+      if (!isBatchOrder && receiptFile) {
+        setUploading(true);
+        const { url } = await api.uploadReceipt(receiptFile);
+        paymentReceiptUrl = url;
+        setUploading(false);
+      }
 
       await api.createOrder({
         items: items.map((i) => ({ productId: i.productId, quantity: i.quantity })),
-        paymentReceiptUrl: url,
+        paymentReceiptUrl,
       });
 
       clear();
@@ -103,28 +113,41 @@ function CheckoutInner() {
           </div>
         </Card>
 
-        <Card>
-          <div className="font-bold mb-2.5">የክፍያ ደረሰኝ ስክሪንሾት</div>
-          <p className="hint mb-3">ወደ ባንክ ሂሳብ ከተላከ በኋላ ደረሰኙን በፎቶ ያንሱ እና እዚህ ያያይዙ</p>
+        {isBatchOrder ? (
+          <Card>
+            <div className="font-bold mb-2.5">🚚 ማስያዣ ትዕዛዝ</div>
+            <p className="hint mb-3">
+              ይህ ትዕዛዝ መኪናው እስኪሞላ ድረስ ቦታ ያስይዝልዎታል — አሁን መክፈል አያስፈልግም። መኪናው ሲሞላ ደረሰኝ
+              እንዲልኩ በ«ትዕዛዞቼ» ገፅ ላይ እናሳውቅዎታለን።
+            </p>
+            <Button variant="primary" block disabled={submitting} onClick={submitOrder}>
+              {submitting ? 'ትዕዛዝ በመላክ ላይ...' : 'ቦታ ያዝ (ትዕዛዝ ላክ)'}
+            </Button>
+          </Card>
+        ) : (
+          <Card>
+            <div className="font-bold mb-2.5">የክፍያ ደረሰኝ ስክሪንሾት</div>
+            <p className="hint mb-3">ወደ ባንክ ሂሳብ ከተላከ በኋላ ደረሰኙን በፎቶ ያንሱ እና እዚህ ያያይዙ</p>
 
-          {receiptPreview && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={receiptPreview}
-              alt="receipt preview"
-              className="w-full max-h-[220px] object-contain rounded-[10px] mb-3 border border-paper-line"
-            />
-          )}
+            {receiptPreview && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={receiptPreview}
+                alt="receipt preview"
+                className="w-full max-h-[220px] object-contain rounded-[10px] mb-3 border border-paper-line"
+              />
+            )}
 
-          <label className="btn btn-outline btn-block inline-flex cursor-pointer">
-            {receiptFile ? 'ፎቶ ቀይር' : 'ፎቶ ይምረጡ'}
-            <input type="file" accept="image/*" hidden onChange={onFileChange} />
-          </label>
+            <label className="btn btn-outline btn-block inline-flex cursor-pointer">
+              {receiptFile ? 'ፎቶ ቀይር' : 'ፎቶ ይምረጡ'}
+              <input type="file" accept="image/*" hidden onChange={onFileChange} />
+            </label>
 
-          <Button variant="primary" block className="mt-3.5" disabled={submitting} onClick={submitOrder}>
-            {uploading ? 'ደረሰኝ በመላክ ላይ...' : submitting ? 'ትዕዛዝ በመላክ ላይ...' : 'ትዕዛዝ አረጋግጥ እና ላክ'}
-          </Button>
-        </Card>
+            <Button variant="primary" block className="mt-3.5" disabled={submitting} onClick={submitOrder}>
+              {uploading ? 'ደረሰኝ በመላክ ላይ...' : submitting ? 'ትዕዛዝ በመላክ ላይ...' : 'ትዕዛዝ አረጋግጥ እና ላክ'}
+            </Button>
+          </Card>
+        )}
       </div>
     </div>
   );

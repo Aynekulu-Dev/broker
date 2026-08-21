@@ -193,6 +193,16 @@
     color: theme('colors.ochre.deep');
   }
 
+  .status-pill--awaiting_payment {
+    background: #f6dfda;
+    color: theme('colors.stamp.red');
+  }
+
+  .status-pill--payment_submitted {
+    background: #f4e6c9;
+    color: theme('colors.ochre.deep');
+  }
+
   .status-pill--approved {
     background: #dcebe0;
     color: theme('colors.stamp.green');

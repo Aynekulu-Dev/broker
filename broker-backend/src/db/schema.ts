@@ -15,8 +15,27 @@ import { relations } from 'drizzle-orm';
 export const roleEnum = pgEnum('role', ['CUSTOMER', 'ADMIN']);
 export const orderStatusEnum = pgEnum('order_status', [
   'PENDING',
+  // Batch (truck-load) reached its capacity and admin has asked
+  // customers riding on it to pay. Set on every PENDING order in the
+  // batch at once, see DeliveriesService.requestPayment.
+  'AWAITING_PAYMENT',
+  // Customer uploaded a payment receipt while AWAITING_PAYMENT; waiting
+  // on admin review, same review step as the old up-front-receipt flow.
+  'PAYMENT_SUBMITTED',
   'APPROVED',
   'REJECTED',
+  'DISPATCHED',
+]);
+
+// A "batch" is a truck-load being consolidated toward its capacity.
+// COLLECTING: still accepting orders for this product.
+// FULL: capacity reached, waiting for admin to request payment.
+// PAYMENT_REQUESTED: customers notified, paying / being reviewed.
+// DISPATCHED: vehicle left with an approved, paid load.
+export const deliveryStatusEnum = pgEnum('delivery_status', [
+  'COLLECTING',
+  'FULL',
+  'PAYMENT_REQUESTED',
   'DISPATCHED',
 ]);
 
@@ -47,6 +66,11 @@ export const products = pgTable('products', {
   description: text('description'),
   photoUrl: varchar('photo_url', { length: 500 }).notNull(),
   isInStock: boolean('is_in_stock').default(true).notNull(),
+  // Truck-load consolidation threshold for this product (e.g. 600
+  // jerricans). Null = ordinary flow: pay up front, no batching.
+  // When set, orders for this product accumulate into a COLLECTING
+  // delivery until this quantity is reached (see OrdersService.create).
+  batchCapacity: integer('batch_capacity'),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
@@ -58,9 +82,12 @@ export const orders = pgTable('orders', {
     .notNull(),
   totalAmount: decimal('total_amount', { precision: 12, scale: 2 }).notNull(),
   status: orderStatusEnum('status').default('PENDING').notNull(),
-  paymentReceiptUrl: varchar('payment_receipt_url', { length: 500 }).notNull(),
-  // Set once the order is loaded onto a delivery run (see `deliveries`).
-  // Several orders can share the same deliveryId.
+  // Null while PENDING/AWAITING_PAYMENT — the batch flow only requires
+  // this once the truck is full and payment has been requested. Orders
+  // outside the batch flow still attach a receipt at creation time.
+  paymentReceiptUrl: varchar('payment_receipt_url', { length: 500 }),
+  // Set as soon as the order joins a batch (COLLECTING) — not only at
+  // final dispatch. Several orders can share the same deliveryId.
   deliveryId: uuid('delivery_id').references(() => deliveries.id),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
@@ -85,10 +112,23 @@ export const orderItems = pgTable('order_items', {
 // delivery 1 --> many orders (orders.deliveryId), not the old 1:1.
 export const deliveries = pgTable('deliveries', {
   id: uuid('id').primaryKey().defaultRandom(),
-  vehiclePlateNumber: varchar('vehicle_plate_number', { length: 50 }).notNull(),
-  driverName: varchar('driver_name', { length: 255 }).notNull(),
-  driverPhone: varchar('driver_phone', { length: 20 }).notNull(),
-  dispatchedAt: timestamp('dispatched_at').defaultNow().notNull(),
+  // Only set for batch/consolidation runs (see OrdersService.create).
+  // Manual ad-hoc deliveries (old flow: admin hand-picks already-APPROVED
+  // orders) leave this null.
+  productId: uuid('product_id').references(() => products.id),
+  // Truck capacity for this batch, copied from products.batchCapacity
+  // at batch-creation time (a truck's capacity doesn't change even if
+  // the product's default later does).
+  capacity: integer('capacity'),
+  status: deliveryStatusEnum('status').default('COLLECTING').notNull(),
+  filledAt: timestamp('filled_at'),
+  paymentRequestedAt: timestamp('payment_requested_at'),
+  // Unknown until the admin actually dispatches the truck.
+  vehiclePlateNumber: varchar('vehicle_plate_number', { length: 50 }),
+  driverName: varchar('driver_name', { length: 255 }),
+  driverPhone: varchar('driver_phone', { length: 20 }),
+  dispatchedAt: timestamp('dispatched_at'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
 // ---------- 6. Ledgers ----------
@@ -112,6 +152,7 @@ export const usersRelations = relations(users, ({ many }) => ({
 
 export const productsRelations = relations(products, ({ many }) => ({
   orderItems: many(orderItems),
+  batches: many(deliveries),
 }));
 
 export const ordersRelations = relations(orders, ({ one, many }) => ({
@@ -138,8 +179,12 @@ export const orderItemsRelations = relations(orderItems, ({ one }) => ({
   }),
 }));
 
-export const deliveriesRelations = relations(deliveries, ({ many }) => ({
+export const deliveriesRelations = relations(deliveries, ({ one, many }) => ({
   orders: many(orders),
+  product: one(products, {
+    fields: [deliveries.productId],
+    references: [products.id],
+  }),
 }));
 
 export const ledgersRelations = relations(ledgers, ({ one }) => ({

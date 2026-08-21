@@ -20,12 +20,29 @@ import {
 const FILTER_LABELS: Record<string, string> = {
   ALL: 'ሁሉም',
   PENDING: 'በመጠባበቅ ላይ',
+  AWAITING_PAYMENT: 'ክፍያ ይጠበቃል',
+  PAYMENT_SUBMITTED: 'ክፍያ በግምገማ ላይ',
   APPROVED: 'ጸድቋል',
   DISPATCHED: 'ተልኳል',
   REJECTED: 'ውድቅ ተደርጓል',
 };
 
-const FILTER_OPTIONS = ['ALL', 'PENDING', 'APPROVED', 'DISPATCHED', 'REJECTED'] as const;
+const FILTER_OPTIONS = [
+  'ALL',
+  'PENDING',
+  'AWAITING_PAYMENT',
+  'PAYMENT_SUBMITTED',
+  'APPROVED',
+  'DISPATCHED',
+  'REJECTED',
+] as const;
+
+const BATCH_STATUS_LABELS: Record<string, string> = {
+  COLLECTING: 'በመሰብሰብ ላይ',
+  FULL: 'ሞልቷል — ክፍያ ይጠበቃል',
+  PAYMENT_REQUESTED: 'ክፍያ ተጠይቋል',
+  DISPATCHED: 'ተልኳል',
+};
 
 // Shared dispatch form — used both for a single order and for a batch of
 // several orders riding on the same truck.
@@ -343,15 +360,28 @@ function OrdersInner() {
                 <span className="money text-base text-ochre-deep">
                   {Number(order.totalAmount).toLocaleString()} ብር
                 </span>
-                <a
-                  href={fileUrl(order.paymentReceiptUrl)}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-[13px] font-bold text-ink-navy underline"
-                >
-                  ደረሰኝ ይመልከቱ
-                </a>
+                {order.paymentReceiptUrl ? (
+                  <a
+                    href={fileUrl(order.paymentReceiptUrl)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-[13px] font-bold text-ink-navy underline"
+                  >
+                    ደረሰኝ ይመልከቱ
+                  </a>
+                ) : (
+                  <span className="hint">ደረሰኝ እስካሁን አልገባም</span>
+                )}
               </div>
+
+              {order.delivery && order.delivery.status !== 'DISPATCHED' && (
+                <div className="hint mt-1.5">
+                  🚚 ባች ሁኔታ: {BATCH_STATUS_LABELS[order.delivery.status] || order.delivery.status} —{' '}
+                  <a href="/admin/batches" className="underline font-semibold">
+                    ባቾችን ያስተዳድሩ
+                  </a>
+                </div>
+              )}
 
               {!batchMode && (
                 <div className="flex gap-2 mt-3">
@@ -368,11 +398,27 @@ function OrdersInner() {
                 </div>
               )}
 
-              {!batchMode && order.status === 'PENDING' && (
+              {!batchMode && (order.status === 'PENDING' || order.status === 'PAYMENT_SUBMITTED') && (
                 <div className="flex gap-2 mt-2">
-                  <Button variant="primary" flex onClick={() => approve(order.id)}>
+                  <Button
+                    variant="primary"
+                    flex
+                    disabled={!order.paymentReceiptUrl}
+                    onClick={() => approve(order.id)}
+                  >
                     አጽድቅ
                   </Button>
+                  <Button variant="danger" flex onClick={() => reject(order.id)}>
+                    ውድቅ አድርግ
+                  </Button>
+                </div>
+              )}
+
+              {/* Batch order still reserving a spot or waiting on the
+                  customer to pay — no receipt to approve yet, but the
+                  admin can still cancel the reservation. */}
+              {!batchMode && order.status === 'AWAITING_PAYMENT' && (
+                <div className="flex gap-2 mt-2">
                   <Button variant="danger" flex onClick={() => reject(order.id)}>
                     ውድቅ አድርግ
                   </Button>
@@ -397,7 +443,7 @@ function OrdersInner() {
                 </>
               )}
 
-              {order.delivery && (
+              {order.delivery && order.delivery.status === 'DISPATCHED' && (
                 <div className="mt-3 text-[13px] bg-paper rounded-[10px] p-2.5">
                   🚚 {order.delivery.vehiclePlateNumber} · {order.delivery.driverName} ·{' '}
                   {order.delivery.driverPhone}
