@@ -7,32 +7,30 @@ import { useAuth } from '@/lib/auth';
 import { Reveal } from '@/components/Reveal';
 import { InteractiveDemo } from '@/components/InteractiveDemo';
 
-// Single source of truth for the broker's public contact details — shown
-// as a trust badge in the hero and on the floating call button below.
-// Update here if the owner or number ever changes.
+// የባለቤቱ መረጃ እና ስልክ ቁጥር (በገጹ ላይ ለዕርዳታ የሚታይ)
 const OWNER_NAME = 'ይበልጣል ካሳሁን';
 const OWNER_PHONE_DISPLAY = '+251 91 167 6738';
 const OWNER_PHONE_TEL = '+251911676738';
 
 const FEATURES = [
   {
-    title: 'ያለ የይለፍ ቃል መግቢያ',
-    body: 'ነጋዴዎች admin ከሰጣቸው ኮድ ጋር ብቻ ይገባሉ — የተጠቃሚ ስም ወይም ውስብስብ password አያስፈልግም።',
+    title: 'ቀላል በስልክ ቁጥር መግቢያ',
+    body: 'ነጋዴዎች በተሰጣቸው ስልክ ቁጥር ብቻ በቀላሉ ይገባሉ — የተጠቃሚ ስም ወይም የይለፍ ቃል ማስታወስ አያስፈልግም።',
     icon: <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />,
   },
   {
-    title: 'ቀላል ክምችት አስተዳደር',
+    title: 'ቀለል ያለ የክምችት ቁጥጥር',
     body: '"አለ" ወይም "አልቋል" ብቻ — ትክክለኛ ቁጥር መቁጠር አያስፈልግም፣ በአንድ ጠቅታ ይቀየራል።',
     icon: <path d="M5 8h14M5 12h14M5 16h9" />,
   },
   {
-    title: 'ቀጥታ የቴሌግራም ማንቂያ',
-    body: 'ትዕዛዝ ወይም ደረሰኝ ሲላክ admin ወዲያውኑ በቴሌግራም ኖቲፊኬሽን ያገኛል — refresh ማድረግ አያስፈልግም።',
+    title: 'ፈጣን የትዕዛዝ ማሳወቂያ',
+    body: 'ትዕዛዝ ወይም ደረሰኝ ሲላክ ወዲያውኑ ማሳወቂያ ይደርሳል — ገጽ ማደስ (refresh) ማድረግ አያስፈልግም።',
     icon: <path d="M12 3v18m0-18l-7 4m7-4l7 4M5 7v10l7 4 7-4V7" />,
   },
   {
-    title: 'ትክክለኛ ደብተር',
-    body: 'የእያንዳንዱ ነጋዴ ዕዳ፣ ክፍያ እና ቀሪ ሂሳብ በራስ-ሰር ይሰላል — የማይሳሳት ዲጂታል ደብተር።',
+    title: 'ትክክለኛ ዲጂታል ደብተር',
+    body: 'የእያንዳንዱ ነጋዴ ዕዳ፣ ክፍያ እና ቀሪ ሂሳብ በራስ-ሰር ይሰላል — የማይሳሳት አሰራር።',
     icon: (
       <path d="M4 19.5A2.5 2.5 0 016.5 17H20M4 19.5A2.5 2.5 0 006.5 22H20V4a2 2 0 00-2-2H6.5A2.5 2.5 0 004 4.5v15z" />
     ),
@@ -47,8 +45,6 @@ function PhoneIcon() {
   );
 }
 
-/** Small trust badge under the hero copy: who's behind the platform and
- * how to reach them directly, tap-to-call on mobile. */
 function OwnerBadge() {
   return (
     <a
@@ -60,7 +56,7 @@ function OwnerBadge() {
         <PhoneIcon />
       </span>
       <span className="text-left">
-        <span className="block text-[11px] text-cream/55 font-semibold"></span>
+        <span className="block text-[11px] text-cream/55 font-semibold">የንግዱ ባለቤት</span>
         <span className="block text-sm font-bold text-cream">
           {OWNER_NAME} · <span className="text-ochre">{OWNER_PHONE_DISPLAY}</span>
         </span>
@@ -69,8 +65,6 @@ function OwnerBadge() {
   );
 }
 
-/** Fixed call button, always reachable while browsing the landing page —
- * "በየትኛውም ሰዓት ይደውሉ" — no need to scroll back up to find the number. */
 function FloatingCallButton() {
   return (
     <a
@@ -106,8 +100,7 @@ function FeatureIcon({ children }: { children: React.ReactNode }) {
 function LandingPage() {
   return (
     <div className="min-h-dvh bg-paper overflow-x-hidden">
-      {/* Nav — admin entry point intentionally left off the public header;
-          only merchants/visitors are steered here. See footer for admin access. */}
+      {/* መርከቢያ (Nav) */}
       <header className="sticky top-0 z-30 bg-ink-navy text-cream">
         <div className="max-w-5xl mx-auto px-5 py-4 flex items-center justify-between">
           <span className="font-extrabold text-lg tracking-tight">ትዕዛዝ ደብተር</span>
@@ -125,12 +118,12 @@ function LandingPage() {
         </div>
       </header>
 
-      {/* Hero */}
+      {/* ዋናው መግቢያ (Hero) */}
       <section className="relative overflow-hidden bg-ink-navy text-cream">
         <div className="max-w-5xl mx-auto px-5 pt-16 pb-24 md:pt-24 md:pb-32 relative">
           <div className="max-w-xl">
             <span className="inline-block text-xs font-bold tracking-wide uppercase text-ochre bg-ochre/10 border border-ochre/30 rounded-full px-3 py-1 mb-5 animate-fade-up">
-              ለጅምላ ነጋዴዎች የተሰራ
+              ለጅምላ ነጋዴዎች የተዘጋጀ
             </span>
             <h1 className="text-4xl md:text-5xl font-extrabold leading-[1.15] mb-5 animate-fade-up [animation-delay:80ms]">
               የት ቢሆኑ እናደርሳለን።
@@ -138,8 +131,8 @@ function LandingPage() {
               <span className="text-ochre">ትዕዛዝዎን ይከታተሉ</span>፣ ከመነሻ እስከ መድረሻ።
             </h1>
             <p className="text-cream/75 text-lg leading-relaxed mb-8 animate-fade-up [animation-delay:160ms]">
-              ትዕዛዝ፣ ክምችት፣ ትራንስፖርት እና ሂሳብ በአንድ ቦታ — ያለ Telegram ቡድን ግርግር፣ ያለ የጠፋ ወረቀት።
-              ነጋዴዎችዎ በስልካቸው ብቻ ትዕዛዝ ያደርጋሉ፣ እርስዎ ደግሞ ሁሉንም ነገር ከ dashboard ይቆጣጠራሉ።
+              ትዕዛዝ፣ ክምችት፣ ትራንስፖርት እና ሂሳብ በአንድ ቦታ — ያለ ቡድን ግርግር እና ያለ ወረቀት መጥፋት። 
+              ነጋዴዎች በስልካቸው ብቻ ትዕዛዝ ያደርጋሉ፣ አጠቃላይ ሂደቱንም በቀላሉ ይከታተላሉ።
             </p>
             <div className="flex flex-wrap gap-3 animate-fade-up [animation-delay:240ms]">
               <Link href="/catalog" className="btn btn-primary">
@@ -154,7 +147,6 @@ function LandingPage() {
           </div>
         </div>
 
-        {/* Decorative stamp — floats gently, echoes the in-stock badge used throughout the app */}
         <div
           className="hidden md:flex absolute right-10 top-1/2 -translate-y-1/2 items-center justify-center w-40 h-40 rounded-full border-4 border-ochre/40 text-ochre/70 font-extrabold text-2xl tracking-wide animate-float animate-pulse-ring"
           aria-hidden
@@ -163,12 +155,12 @@ function LandingPage() {
         </div>
       </section>
 
-      {/* Features */}
+      {/* ባህሪያት (Features) */}
       <section className="max-w-5xl mx-auto px-5 py-16 md:py-20">
         <Reveal className="text-center mb-12">
           <h2 className="text-2xl md:text-3xl font-extrabold text-ink mb-2">ስርዓቱ ምን ይፈታል</h2>
           <p className="text-ink-soft max-w-lg mx-auto">
-            ከ 400+ በላይ ነጋዴዎች ጋር በቀጥታ ምክክር የተሰራ — እውነተኛ ችግር ላይ ያተኮረ።
+            ከበርካታ ነጋዴዎች ጋር በቀጥታ በመወያየት የተሰራ — እውነተኛ የንግድ ችግሮችን የሚፈታ።
           </p>
         </Reveal>
         <div className="grid sm:grid-cols-2 gap-5">
@@ -188,12 +180,12 @@ function LandingPage() {
         </div>
       </section>
 
-      {/* Interactive "how it works" demo */}
+      {/* የዴሞ ክፍፍል (Interactive Demo) */}
       <section className="bg-ink-navy-deep text-cream">
         <div className="max-w-5xl mx-auto px-5 py-16 md:py-20">
           <Reveal className="text-center mb-12">
             <h2 className="text-2xl md:text-3xl font-extrabold mb-2">እንዴት ይሰራል</h2>
-            <p className="text-cream/60 max-w-md mx-auto">ደረጃውን ይንኩ እና ስክሪኑ ላይ በቀጥታ ይመልከቱ</p>
+            <p className="text-cream/60 max-w-md mx-auto">ደረጃውን በመንካት አሰራሩን በምስል ይመልከቱ</p>
           </Reveal>
           <Reveal delay={100}>
             <InteractiveDemo />
@@ -201,12 +193,12 @@ function LandingPage() {
         </div>
       </section>
 
-      {/* CTA */}
+      {/* ማጠቃለያ ጥሪ (CTA) */}
       <section className="max-w-5xl mx-auto px-5 py-16 md:py-20 text-center">
         <Reveal>
           <h2 className="text-2xl md:text-3xl font-extrabold text-ink mb-4">ዛሬውኑ ይጀምሩ</h2>
           <p className="text-ink-soft mb-8 max-w-md mx-auto">
-            ካታሎግ ላይ ዋጋ እና ክምችት ያለ ምዝገባ ይመልከቱ። ትዕዛዝ ለመላክ ኮድ ካገኙ ብቻ ይግቡ።
+            ካታሎግ ላይ ዋጋዎችን እና የምርት ዝርዝሮችን ያለ ምዝገባ ማየት ይችላሉ። ትዕዛዝ ለመላክ የተሰጠዎትን ስልክ ቁጥር ይጠቀሙ።
           </p>
           <div className="flex flex-wrap justify-center gap-3">
             <Link href="/catalog" className="btn btn-primary">
@@ -219,9 +211,7 @@ function LandingPage() {
         </Reveal>
       </section>
 
-      {/* Admin access deliberately kept out of the main nav/CTAs above —
-          a low-visibility footer link is enough for the one person who
-          needs it, without advertising the dashboard to every visitor. */}
+      {/* መግለጫ እና አስተዳዳሪ መግቢያ (Footer) */}
       <footer className="border-t border-paper-line py-8 text-center text-sm text-ink-soft">
         <div>ትዕዛዝ ደብተር — የጅምላ ንግድ ትዕዛዝ ስርዓት</div>
         <Link href="/admin/login" className="text-ink-soft/50 text-xs mt-2 inline-block hover:text-ink-soft">
