@@ -67,7 +67,7 @@ function NavTabs<T extends string>({
 export function AdminNav({
   active,
 }: {
-  active: 'orders' | 'products' | 'ledgers' | 'customers' | 'batches';
+  active: 'orders' | 'products' | 'ledgers' | 'customers' | 'batches' | 'settings';
 }) {
   return (
     <NavTabs
@@ -78,6 +78,7 @@ export function AdminNav({
         { key: 'products', href: '/admin/products', label: 'ካታሎግ' },
         { key: 'ledgers', href: '/admin/ledgers', label: 'ደብተር' },
         { key: 'customers', href: '/admin/customers', label: 'ነጋዴዎች' },
+        { key: 'settings', href: '/admin/settings', label: 'ቅንብር' },
       ]}
     />
   );

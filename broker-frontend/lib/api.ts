@@ -75,6 +75,12 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ phoneNumber, password }),
     }),
+  // Admin: change own password (must supply the current one).
+  changeAdminPassword: (currentPassword: string, newPassword: string) =>
+    request<{ message: string }>('/auth/admin/change-password', {
+      method: 'POST',
+      body: JSON.stringify({ currentPassword, newPassword }),
+    }),
   // Admin: merchant lost their code, issue a fresh one.
   regenerateAccessCode: (customerId: string) =>
     request<{ accessCode: string; warning: string }>(

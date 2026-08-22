@@ -1,7 +1,7 @@
 import { Body, Controller, Param, Post, Req, UseGuards } from '@nestjs/common';
 import type { Request } from 'express';
 import { AuthService } from './auth.service';
-import { AdminLoginDto, CustomerLoginDto } from './dto/login.dto';
+import { AdminLoginDto, ChangeAdminPasswordDto, CustomerLoginDto } from './dto/login.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { Roles, RolesGuard } from '../../common/guards/roles.guard';
 
@@ -20,6 +20,19 @@ export class AuthController {
   @Post('admin/login')
   adminLogin(@Body() dto: AdminLoginDto) {
     return this.authService.adminLogin(dto.phoneNumber, dto.password);
+  }
+
+  // Admin changes their own password (must know the current one).
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @Post('admin/change-password')
+  changeAdminPassword(@Body() dto: ChangeAdminPasswordDto, @Req() req: Request) {
+    const userId = (req as any).user.sub;
+    return this.authService.changeAdminPassword(
+      userId,
+      dto.currentPassword,
+      dto.newPassword,
+    );
   }
 
   // Admin regenerates a merchant's access code (e.g. they lost it).

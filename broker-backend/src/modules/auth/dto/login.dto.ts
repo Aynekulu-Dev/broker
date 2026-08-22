@@ -43,3 +43,17 @@ export class AdminLoginDto {
   @IsString()
   password: string;
 }
+
+/**
+ * Self-service password change for an already-logged-in admin.
+ * Requires the current password so a stolen/left-open session token
+ * alone isn't enough to take over the account.
+ */
+export class ChangeAdminPasswordDto {
+  @IsString()
+  currentPassword: string;
+
+  @IsString()
+  @MinLength(8, { message: 'newPassword must be at least 8 characters' })
+  newPassword: string;
+}

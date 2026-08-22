@@ -198,6 +198,40 @@ export class AuthService {
     return this.issueToken(user);
   }
 
+  /**
+   * Self-service password change: the admin proves they know the
+   * current password, then it's replaced. No email/SMS reset flow
+   * exists by design (see README) — this is the only path an admin
+   * has to change their own password once logged in.
+   */
+  async changeAdminPassword(
+    userId: string,
+    currentPassword: string,
+    newPassword: string,
+  ) {
+    const [user] = await this.db
+      .select()
+      .from(schema.users)
+      .where(eq(schema.users.id, userId));
+
+    if (!user || user.role !== 'ADMIN' || !user.passwordHash) {
+      throw new UnauthorizedException('Invalid admin account');
+    }
+
+    const valid = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!valid) {
+      throw new UnauthorizedException('Current password is incorrect');
+    }
+
+    const newHash = await bcrypt.hash(newPassword, 10);
+    await this.db
+      .update(schema.users)
+      .set({ passwordHash: newHash })
+      .where(eq(schema.users.id, userId));
+
+    return { message: 'Password updated successfully' };
+  }
+
   private issueToken(user: schema.User) {
     const payload = {
       sub: user.id,
