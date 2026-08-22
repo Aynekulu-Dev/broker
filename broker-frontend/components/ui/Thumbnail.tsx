@@ -30,7 +30,13 @@ export function Thumbnail({
     >
       {photoUrl && (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={fileUrl(photoUrl)} alt={alt} className="w-full h-full object-cover" />
+        <img
+          src={fileUrl(photoUrl)}
+          alt={alt}
+          loading="lazy"
+          decoding="async"
+          className="w-full h-full object-cover"
+        />
       )}
     </div>
   );

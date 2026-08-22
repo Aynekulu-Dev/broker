@@ -29,6 +29,13 @@
       "when": 1787224804751,
       "tag": "0003_truck_batching",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1787312660546,
+      "tag": "0004_opposite_bill_hollister",
+      "breakpoints": true
     }
   ]
 }

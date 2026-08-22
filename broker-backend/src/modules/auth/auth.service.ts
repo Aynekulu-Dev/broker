@@ -2,6 +2,7 @@ import {
   ConflictException,
   Inject,
   Injectable,
+  Logger,
   NotFoundException,
   UnauthorizedException,
   HttpException,
@@ -33,6 +34,8 @@ const LOGIN_ATTEMPT_WINDOW_SECONDS = 15 * 60;
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     @Inject(DB) private readonly db: NodePgDatabase<typeof schema>,
     @Inject(REDIS) private readonly redis: Redis,
@@ -135,15 +138,24 @@ export class AuthService {
 
   private async enforceLoginRateLimit(ip: string) {
     const key = `login:attempts:${ip}`;
-    const attempts = await this.redis.incr(key);
-    if (attempts === 1) {
-      await this.redis.expire(key, LOGIN_ATTEMPT_WINDOW_SECONDS);
-    }
-    if (attempts > LOGIN_ATTEMPT_LIMIT) {
-      throw new HttpException(
-        'Too many login attempts. Please try again later.',
-        HttpStatus.TOO_MANY_REQUESTS,
-      );
+    try {
+      const attempts = await this.redis.incr(key);
+      if (attempts === 1) {
+        await this.redis.expire(key, LOGIN_ATTEMPT_WINDOW_SECONDS);
+      }
+      if (attempts > LOGIN_ATTEMPT_LIMIT) {
+        throw new HttpException(
+          'Too many login attempts. Please try again later.',
+          HttpStatus.TOO_MANY_REQUESTS,
+        );
+      }
+    } catch (err) {
+      if (err instanceof HttpException) throw err; // real rate-limit hit — keep blocking
+      // Redis unreachable: fail OPEN, not closed. Rate limiting is a
+      // defense-in-depth measure, not the primary auth check — a cache
+      // outage should never be the reason a legitimate merchant can't
+      // log in.
+      this.logger.warn(`Rate-limit check skipped (Redis unavailable): ${(err as Error).message}`);
     }
   }
 

@@ -1,9 +1,8 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { and, desc, eq, gte, inArray, lt, sql } from 'drizzle-orm';
-import type Redis from 'ioredis';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { DB } from '../../db/db.module';
-import { REDIS } from '../../common/redis.module';
+import { CacheHelper } from '../../common/cache.helper';
 import * as schema from '../../db/schema';
 import { AddManualCreditDto } from './dto/ledger.dto';
 
@@ -13,7 +12,7 @@ const ANALYTICS_CACHE_TTL_SECONDS = 300; // 5 min — heavy aggregate queries
 export class LedgersService {
   constructor(
     @Inject(DB) private readonly db: NodePgDatabase<typeof schema>,
-    @Inject(REDIS) private readonly redis: Redis,
+    private readonly cache: CacheHelper,
   ) {}
 
   /** Individual merchant ledger — full history + running balance. */
@@ -33,41 +32,40 @@ export class LedgersService {
   /**
    * FR-06/FR-07: admin dashboard — every merchant's current balance,
    * served from Redis since it aggregates across all customers.
+   *
+   * This used to run one extra SELECT per merchant to fetch their name/
+   * phone (an N+1 query — 40 merchants meant 41 round trips to the DB
+   * on every cache miss). It's now a single query: DISTINCT ON picks
+   * each customer's latest ledger row, joined directly against users.
    */
   async getAllBalances() {
-    const cacheKey = 'analytics:merchant-balances';
-    const cached = await this.redis.get(cacheKey);
-    if (cached) return JSON.parse(cached);
+    const cached = await this.cache.get<any[]>('analytics:merchant-balances');
+    if (cached) return cached;
 
-    const result = await this.db.execute(sql`
-      SELECT DISTINCT ON (customer_id)
-        customer_id, balance, recorded_at
-      FROM ledgers
-      ORDER BY customer_id, recorded_at DESC
+    const result = await this.db.execute<{
+      customer_id: string;
+      balance: string;
+      store_name: string;
+      owner_name: string;
+      phone_number: string;
+    }>(sql`
+      SELECT DISTINCT ON (l.customer_id)
+        l.customer_id, l.balance,
+        u.store_name, u.owner_name, u.phone_number
+      FROM ledgers l
+      INNER JOIN users u ON u.id = l.customer_id
+      ORDER BY l.customer_id, l.recorded_at DESC
     `);
 
-    const balances = await Promise.all(
-      (result.rows as any[]).map(async (row) => {
-        const [customer] = await this.db
-          .select()
-          .from(schema.users)
-          .where(eq(schema.users.id, row.customer_id));
-        return {
-          customerId: row.customer_id,
-          storeName: customer?.storeName,
-          ownerName: customer?.ownerName,
-          phoneNumber: customer?.phoneNumber,
-          balance: row.balance,
-        };
-      }),
-    );
+    const balances = result.rows.map((row) => ({
+      customerId: row.customer_id,
+      storeName: row.store_name,
+      ownerName: row.owner_name,
+      phoneNumber: row.phone_number,
+      balance: row.balance,
+    }));
 
-    await this.redis.set(
-      cacheKey,
-      JSON.stringify(balances),
-      'EX',
-      ANALYTICS_CACHE_TTL_SECONDS,
-    );
+    await this.cache.set('analytics:merchant-balances', balances, ANALYTICS_CACHE_TTL_SECONDS);
     return balances;
   }
 
@@ -109,7 +107,7 @@ export class LedgersService {
       return inserted;
     });
 
-    await this.redis.del('analytics:merchant-balances');
+    await this.cache.del('analytics:merchant-balances');
     return entry;
   }
 
@@ -153,8 +151,8 @@ export class LedgersService {
    */
   async getMonthlyProductSales(year: number, month: number) {
     const cacheKey = `analytics:monthly-sales:${year}-${month}`;
-    const cached = await this.redis.get(cacheKey);
-    if (cached) return JSON.parse(cached);
+    const cached = await this.cache.get<any[]>(cacheKey);
+    if (cached) return cached;
 
     const start = new Date(year, month - 1, 1);
     const end = new Date(year, month, 1);
@@ -178,7 +176,7 @@ export class LedgersService {
       )
       .groupBy(schema.orderItems.productId, schema.products.name);
 
-    await this.redis.set(cacheKey, JSON.stringify(rows), 'EX', ANALYTICS_CACHE_TTL_SECONDS);
+    await this.cache.set(cacheKey, rows, ANALYTICS_CACHE_TTL_SECONDS);
     return rows;
   }
 }

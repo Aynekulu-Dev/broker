@@ -1,9 +1,8 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { eq } from 'drizzle-orm';
-import type Redis from 'ioredis';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { DB } from '../../db/db.module';
-import { REDIS } from '../../common/redis.module';
+import { CacheHelper } from '../../common/cache.helper';
 import * as schema from '../../db/schema';
 import {
   CreateProductDto,
@@ -18,24 +17,20 @@ const CATALOG_CACHE_TTL_SECONDS = 60; // short TTL, invalidated on writes anyway
 export class ProductsService {
   constructor(
     @Inject(DB) private readonly db: NodePgDatabase<typeof schema>,
-    @Inject(REDIS) private readonly redis: Redis,
+    private readonly cache: CacheHelper,
   ) {}
 
   /**
    * FR-07: Catalog reads are served from Redis when possible so merchants
-   * on slow mobile networks get near-instant responses.
+   * on slow mobile networks get near-instant responses. If the cache is
+   * unavailable, this transparently falls back to a direct DB read.
    */
   async findAll() {
-    const cached = await this.redis.get(CATALOG_CACHE_KEY);
-    if (cached) return JSON.parse(cached);
+    const cached = await this.cache.get<schema.Product[]>(CATALOG_CACHE_KEY);
+    if (cached) return cached;
 
     const items = await this.db.select().from(schema.products);
-    await this.redis.set(
-      CATALOG_CACHE_KEY,
-      JSON.stringify(items),
-      'EX',
-      CATALOG_CACHE_TTL_SECONDS,
-    );
+    await this.cache.set(CATALOG_CACHE_KEY, items, CATALOG_CACHE_TTL_SECONDS);
     return items;
   }
 
@@ -88,6 +83,6 @@ export class ProductsService {
   }
 
   private async invalidateCache() {
-    await this.redis.del(CATALOG_CACHE_KEY);
+    await this.cache.del(CATALOG_CACHE_KEY);
   }
 }
