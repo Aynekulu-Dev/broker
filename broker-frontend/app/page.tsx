@@ -60,7 +60,7 @@ function OwnerBadge() {
         <PhoneIcon />
       </span>
       <span className="text-left">
-        <span className="block text-[11px] text-cream/55 font-semibold">የደላላው ባለቤት</span>
+        <span className="block text-[11px] text-cream/55 font-semibold"></span>
         <span className="block text-sm font-bold text-cream">
           {OWNER_NAME} · <span className="text-ochre">{OWNER_PHONE_DISPLAY}</span>
         </span>
@@ -168,7 +168,7 @@ function LandingPage() {
         <Reveal className="text-center mb-12">
           <h2 className="text-2xl md:text-3xl font-extrabold text-ink mb-2">ስርዓቱ ምን ይፈታል</h2>
           <p className="text-ink-soft max-w-lg mx-auto">
-            ከ 40+ በላይ ነጋዴዎች ጋር በቀጥታ ምክክር የተሰራ — እውነተኛ ችግር ላይ ያተኮረ።
+            ከ 400+ በላይ ነጋዴዎች ጋር በቀጥታ ምክክር የተሰራ — እውነተኛ ችግር ላይ ያተኮረ።
           </p>
         </Reveal>
         <div className="grid sm:grid-cols-2 gap-5">
