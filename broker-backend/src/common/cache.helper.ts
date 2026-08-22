@@ -1,6 +1,6 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import type Redis from 'ioredis';
-import { REDIS } from './redis.module';
+import { REDIS } from './redis.tokens';
 
 /**
  * Thin wrapper around Redis reads/writes used by every cached endpoint.
