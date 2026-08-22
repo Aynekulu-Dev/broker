@@ -7,6 +7,13 @@ import { useAuth } from '@/lib/auth';
 import { Reveal } from '@/components/Reveal';
 import { InteractiveDemo } from '@/components/InteractiveDemo';
 
+// Single source of truth for the broker's public contact details — shown
+// as a trust badge in the hero and on the floating call button below.
+// Update here if the owner or number ever changes.
+const OWNER_NAME = 'ይበልጣል ካሳሁን';
+const OWNER_PHONE_DISPLAY = '+251 91 167 6738';
+const OWNER_PHONE_TEL = '+251911676738';
+
 const FEATURES = [
   {
     title: 'ያለ የይለፍ ቃል መግቢያ',
@@ -31,6 +38,54 @@ const FEATURES = [
     ),
   },
 ];
+
+function PhoneIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
+      <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z" />
+    </svg>
+  );
+}
+
+/** Small trust badge under the hero copy: who's behind the platform and
+ * how to reach them directly, tap-to-call on mobile. */
+function OwnerBadge() {
+  return (
+    <a
+      href={`tel:${OWNER_PHONE_TEL}`}
+      className="inline-flex items-center gap-3 bg-white/5 border border-cream/15 rounded-2xl px-4 py-2.5 mt-6 animate-fade-up [animation-delay:320ms] hover:bg-white/10 transition-colors"
+    >
+      <span className="relative flex items-center justify-center w-9 h-9 rounded-full bg-ochre/15 text-ochre shrink-0">
+        <span className="absolute inset-0 rounded-full animate-pulse-ring" />
+        <PhoneIcon />
+      </span>
+      <span className="text-left">
+        <span className="block text-[11px] text-cream/55 font-semibold">የደላላው ባለቤት</span>
+        <span className="block text-sm font-bold text-cream">
+          {OWNER_NAME} · <span className="text-ochre">{OWNER_PHONE_DISPLAY}</span>
+        </span>
+      </span>
+    </a>
+  );
+}
+
+/** Fixed call button, always reachable while browsing the landing page —
+ * "በየትኛውም ሰዓት ይደውሉ" — no need to scroll back up to find the number. */
+function FloatingCallButton() {
+  return (
+    <a
+      href={`tel:${OWNER_PHONE_TEL}`}
+      className="fixed bottom-5 right-5 z-40 flex items-center gap-2.5 bg-ochre text-white rounded-full pl-4 pr-5 py-3.5 shadow-[0_6px_20px_rgba(192,138,40,0.45)] hover:bg-ochre-deep transition-colors"
+      aria-label={`ደውል ${OWNER_PHONE_DISPLAY}`}
+    >
+      <span className="relative flex items-center justify-center w-5 h-5">
+        <span className="absolute inset-0 rounded-full animate-pulse-ring" />
+        <PhoneIcon />
+      </span>
+      <span className="font-bold text-sm whitespace-nowrap">ይደውሉ</span>
+    </a>
+  );
+}
 
 function FeatureIcon({ children }: { children: React.ReactNode }) {
   return (
@@ -94,6 +149,8 @@ function LandingPage() {
                 እንደ ነጋዴ ግባ
               </Link>
             </div>
+
+            <OwnerBadge />
           </div>
         </div>
 
@@ -171,6 +228,8 @@ function LandingPage() {
           የአስተዳዳሪ መግቢያ
         </Link>
       </footer>
+
+      <FloatingCallButton />
     </div>
   );
 }
