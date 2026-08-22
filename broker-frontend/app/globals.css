@@ -81,7 +81,10 @@
 
   .container {
     @apply w-full max-w-3xl mx-auto px-4 pt-5;
-    padding-bottom: 100px;
+    /* Room for the fixed bottom nav (64px) + cart bar above it on the
+       customer side; a little extra than admin pages need, but harmless
+       whitespace there rather than content hidden under the bars here. */
+    padding-bottom: 160px;
   }
 
   .paper-card {

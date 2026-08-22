@@ -219,7 +219,10 @@ export class DeliveriesService {
   async findOne(id: string) {
     const delivery = await this.db.query.deliveries.findFirst({
       where: eq(schema.deliveries.id, id),
-      with: { orders: true },
+      // Order items included (not just the bare order) so a customer's
+      // tracking view can show "X / capacity" batch-fill progress without
+      // a second round trip — see CustomerBottomNav-era orders page.
+      with: { orders: { with: { items: true } } },
     });
     if (!delivery) throw new NotFoundException('Delivery not found');
     return delivery;

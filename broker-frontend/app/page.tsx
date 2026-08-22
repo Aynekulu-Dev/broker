@@ -51,22 +51,20 @@ function FeatureIcon({ children }: { children: React.ReactNode }) {
 function LandingPage() {
   return (
     <div className="min-h-dvh bg-paper overflow-x-hidden">
-      {/* Nav */}
+      {/* Nav — admin entry point intentionally left off the public header;
+          only merchants/visitors are steered here. See footer for admin access. */}
       <header className="sticky top-0 z-30 bg-ink-navy text-cream">
         <div className="max-w-5xl mx-auto px-5 py-4 flex items-center justify-between">
           <span className="font-extrabold text-lg tracking-tight">ትዕዛዝ ደብተር</span>
           <div className="flex items-center gap-2">
             <Link
-              href="/login"
+              href="/catalog"
               className="text-sm font-bold px-4 py-2 rounded-lg hover:bg-white/10 transition-colors"
             >
-              የነጋዴ መግቢያ
+              ካታሎግ ይመልከቱ
             </Link>
-            <Link
-              href="/admin/login"
-              className="text-sm font-bold px-4 py-2 rounded-lg border border-cream/30 hover:bg-white/10 transition-colors"
-            >
-              የአስተዳዳሪ መግቢያ
+            <Link href="/login" className="btn btn-primary !py-2 !px-4 !text-sm">
+              የነጋዴ መግቢያ
             </Link>
           </div>
         </div>
@@ -89,11 +87,11 @@ function LandingPage() {
               ነጋዴዎችዎ በስልካቸው ብቻ ትዕዛዝ ያደርጋሉ፣ እርስዎ ደግሞ ሁሉንም ነገር ከ dashboard ይቆጣጠራሉ።
             </p>
             <div className="flex flex-wrap gap-3 animate-fade-up [animation-delay:240ms]">
-              <Link href="/login" className="btn btn-primary">
-                እንደ ነጋዴ ግባ →
+              <Link href="/catalog" className="btn btn-primary">
+                ካታሎግ ይመልከቱ →
               </Link>
-              <Link href="/admin/login" className="btn btn-outline !border-cream/40 !text-cream">
-                የአስተዳዳሪ ዳሽቦርድ
+              <Link href="/login" className="btn btn-outline !border-cream/40 !text-cream">
+                እንደ ነጋዴ ግባ
               </Link>
             </div>
           </div>
@@ -151,21 +149,27 @@ function LandingPage() {
         <Reveal>
           <h2 className="text-2xl md:text-3xl font-extrabold text-ink mb-4">ዛሬውኑ ይጀምሩ</h2>
           <p className="text-ink-soft mb-8 max-w-md mx-auto">
-            ኮድ ካገኙ ወደ ካታሎግ ይግቡ። Admin ከሆኑ dashboard ውስጥ ገብተው ነጋዴ ይመዝግቡ።
+            ካታሎግ ላይ ዋጋ እና ክምችት ያለ ምዝገባ ይመልከቱ። ትዕዛዝ ለመላክ ኮድ ካገኙ ብቻ ይግቡ።
           </p>
           <div className="flex flex-wrap justify-center gap-3">
-            <Link href="/login" className="btn btn-primary">
-              እንደ ነጋዴ ግባ
+            <Link href="/catalog" className="btn btn-primary">
+              ካታሎግ ይመልከቱ
             </Link>
-            <Link href="/admin/login" className="btn btn-navy">
-              እንደ አስተዳዳሪ ግባ
+            <Link href="/login" className="btn btn-navy">
+              እንደ ነጋዴ ግባ
             </Link>
           </div>
         </Reveal>
       </section>
 
+      {/* Admin access deliberately kept out of the main nav/CTAs above —
+          a low-visibility footer link is enough for the one person who
+          needs it, without advertising the dashboard to every visitor. */}
       <footer className="border-t border-paper-line py-8 text-center text-sm text-ink-soft">
-        ትዕዛዝ ደብተር — የጅምላ ንግድ ትዕዛዝ ስርዓት
+        <div>ትዕዛዝ ደብተር — የጅምላ ንግድ ትዕዛዝ ስርዓት</div>
+        <Link href="/admin/login" className="text-ink-soft/50 text-xs mt-2 inline-block hover:text-ink-soft">
+          የአስተዳዳሪ መግቢያ
+        </Link>
       </footer>
     </div>
   );

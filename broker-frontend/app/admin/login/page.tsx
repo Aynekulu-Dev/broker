@@ -23,7 +23,11 @@ export default function AdminLoginPage() {
       login(res.accessToken, res.user);
       router.replace('/admin/orders');
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'መግባት አልተቻለም');
+      if (err instanceof ApiError && err.status === 429) {
+        setError('ብዙ ጊዜ ተሞክሯል። እባክዎ ጥቂት ደቂቃ ቆይተው እንደገና ይሞክሩ።');
+      } else {
+        setError(err instanceof ApiError ? err.message : 'መግባት አልተቻለም');
+      }
     } finally {
       setLoading(false);
     }
