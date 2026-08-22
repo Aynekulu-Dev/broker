@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
+import { Reveal } from '@/components/Reveal';
+import { InteractiveDemo } from '@/components/InteractiveDemo';
 
 const FEATURES = [
   {
@@ -30,24 +32,6 @@ const FEATURES = [
   },
 ];
 
-const STEPS = [
-  {
-    n: '1',
-    title: 'ካታሎግ ይመልከቱ',
-    body: 'የዛሬውን ዋጋ እና ክምችት ሁኔታ ("አለ"/"አልቋል") በቀጥታ ከስልክዎ ይመልከቱ።',
-  },
-  {
-    n: '2',
-    title: 'ትዕዛዝ ያድርጉ',
-    body: 'የፈለጉትን ይምረጡ፣ ወደ ባንክ ይክፈሉ፣ የደረሰኝ ፎቶ ያያይዙ።',
-  },
-  {
-    n: '3',
-    title: 'ትራንስፖርት ይከታተሉ',
-    body: 'ትዕዛዝዎ ሲጸድቅ እና መኪና ሲጫን፣ ታርጋ ቁጥር እና የሹፌር መረጃ ወዲያውኑ ያገኛሉ።',
-  },
-];
-
 function FeatureIcon({ children }: { children: React.ReactNode }) {
   return (
     <svg
@@ -66,7 +50,7 @@ function FeatureIcon({ children }: { children: React.ReactNode }) {
 
 function LandingPage() {
   return (
-    <div className="min-h-dvh bg-paper">
+    <div className="min-h-dvh bg-paper overflow-x-hidden">
       {/* Nav */}
       <header className="sticky top-0 z-30 bg-ink-navy text-cream">
         <div className="max-w-5xl mx-auto px-5 py-4 flex items-center justify-between">
@@ -92,17 +76,19 @@ function LandingPage() {
       <section className="relative overflow-hidden bg-ink-navy text-cream">
         <div className="max-w-5xl mx-auto px-5 pt-16 pb-24 md:pt-24 md:pb-32 relative">
           <div className="max-w-xl">
-            <span className="inline-block text-xs font-bold tracking-wide uppercase text-ochre bg-ochre/10 border border-ochre/30 rounded-full px-3 py-1 mb-5">
-              ለባህር ዳር ነጋዴዎች የተሰራ
+            <span className="inline-block text-xs font-bold tracking-wide uppercase text-ochre bg-ochre/10 border border-ochre/30 rounded-full px-3 py-1 mb-5 animate-fade-up">
+              ለጅምላ ነጋዴዎች የተሰራ
             </span>
-            <h1 className="text-4xl md:text-5xl font-extrabold leading-[1.15] mb-5">
-              የወረቀት ደብተርን ወደ ዲጂታል ደብተር ይቀይሩ
+            <h1 className="text-4xl md:text-5xl font-extrabold leading-[1.15] mb-5 animate-fade-up [animation-delay:80ms]">
+              የት ቢሆኑ እናደርሳለን።
+              <br />
+              <span className="text-ochre">ትዕዛዝዎን ይከታተሉ</span>፣ ከመነሻ እስከ መድረሻ።
             </h1>
-            <p className="text-cream/75 text-lg leading-relaxed mb-8">
+            <p className="text-cream/75 text-lg leading-relaxed mb-8 animate-fade-up [animation-delay:160ms]">
               ትዕዛዝ፣ ክምችት፣ ትራንስፖርት እና ሂሳብ በአንድ ቦታ — ያለ Telegram ቡድን ግርግር፣ ያለ የጠፋ ወረቀት።
               ነጋዴዎችዎ በስልካቸው ብቻ ትዕዛዝ ያደርጋሉ፣ እርስዎ ደግሞ ሁሉንም ነገር ከ dashboard ይቆጣጠራሉ።
             </p>
-            <div className="flex flex-wrap gap-3">
+            <div className="flex flex-wrap gap-3 animate-fade-up [animation-delay:240ms]">
               <Link href="/login" className="btn btn-primary">
                 እንደ ነጋዴ ግባ →
               </Link>
@@ -113,10 +99,9 @@ function LandingPage() {
           </div>
         </div>
 
-        {/* Decorative stamp, echoes the in-stock badge used throughout the app */}
+        {/* Decorative stamp — floats gently, echoes the in-stock badge used throughout the app */}
         <div
-          className="hidden md:flex absolute right-10 top-1/2 -translate-y-1/2 items-center justify-center w-40 h-40 rounded-full border-4 border-ochre/40 text-ochre/70 font-extrabold text-2xl tracking-wide"
-          style={{ transform: 'translateY(-50%) rotate(-12deg)' }}
+          className="hidden md:flex absolute right-10 top-1/2 -translate-y-1/2 items-center justify-center w-40 h-40 rounded-full border-4 border-ochre/40 text-ochre/70 font-extrabold text-2xl tracking-wide animate-float animate-pulse-ring"
           aria-hidden
         >
           <span className="border-2 border-current rounded-lg px-4 py-2">አለ</span>
@@ -125,62 +110,58 @@ function LandingPage() {
 
       {/* Features */}
       <section className="max-w-5xl mx-auto px-5 py-16 md:py-20">
-        <h2 className="text-2xl md:text-3xl font-extrabold text-ink text-center mb-2">
-          ስርዓቱ ምን ይፈታል
-        </h2>
-        <p className="text-ink-soft text-center mb-12 max-w-lg mx-auto">
-          ከ 40+ በላይ ነጋዴዎች ጋር በቀጥታ ምክክር የተሰራ — እውነተኛ ችግር ላይ ያተኮረ።
-        </p>
+        <Reveal className="text-center mb-12">
+          <h2 className="text-2xl md:text-3xl font-extrabold text-ink mb-2">ስርዓቱ ምን ይፈታል</h2>
+          <p className="text-ink-soft max-w-lg mx-auto">
+            ከ 40+ በላይ ነጋዴዎች ጋር በቀጥታ ምክክር የተሰራ — እውነተኛ ችግር ላይ ያተኮረ።
+          </p>
+        </Reveal>
         <div className="grid sm:grid-cols-2 gap-5">
-          {FEATURES.map((f) => (
-            <div key={f.title} className="paper-card p-6 flex gap-4">
-              <div className="shrink-0 w-11 h-11 rounded-xl bg-ochre/10 text-ochre-deep flex items-center justify-center">
-                <FeatureIcon>{f.icon}</FeatureIcon>
+          {FEATURES.map((f, i) => (
+            <Reveal key={f.title} delay={i * 90}>
+              <div className="paper-card p-6 flex gap-4 h-full transition-transform hover:-translate-y-1">
+                <div className="shrink-0 w-11 h-11 rounded-xl bg-ochre/10 text-ochre-deep flex items-center justify-center">
+                  <FeatureIcon>{f.icon}</FeatureIcon>
+                </div>
+                <div>
+                  <div className="font-bold text-ink mb-1">{f.title}</div>
+                  <p className="text-sm text-ink-soft leading-relaxed">{f.body}</p>
+                </div>
               </div>
-              <div>
-                <div className="font-bold text-ink mb-1">{f.title}</div>
-                <p className="text-sm text-ink-soft leading-relaxed">{f.body}</p>
-              </div>
-            </div>
+            </Reveal>
           ))}
         </div>
       </section>
 
-      {/* How it works */}
+      {/* Interactive "how it works" demo */}
       <section className="bg-ink-navy-deep text-cream">
         <div className="max-w-5xl mx-auto px-5 py-16 md:py-20">
-          <h2 className="text-2xl md:text-3xl font-extrabold text-center mb-12">እንዴት ይሰራል</h2>
-          <div className="grid md:grid-cols-3 gap-8">
-            {STEPS.map((s, i) => (
-              <div key={s.n} className="relative">
-                <div className="w-10 h-10 rounded-full bg-ochre text-white font-extrabold flex items-center justify-center mb-4">
-                  {s.n}
-                </div>
-                <div className="font-bold mb-2">{s.title}</div>
-                <p className="text-sm text-cream/70 leading-relaxed">{s.body}</p>
-                {i < STEPS.length - 1 && (
-                  <div className="hidden md:block absolute top-5 left-[calc(100%-1rem)] w-[calc(100%-2rem)] border-t border-dashed border-cream/20" />
-                )}
-              </div>
-            ))}
-          </div>
+          <Reveal className="text-center mb-12">
+            <h2 className="text-2xl md:text-3xl font-extrabold mb-2">እንዴት ይሰራል</h2>
+            <p className="text-cream/60 max-w-md mx-auto">ደረጃውን ይንኩ እና ስክሪኑ ላይ በቀጥታ ይመልከቱ</p>
+          </Reveal>
+          <Reveal delay={100}>
+            <InteractiveDemo />
+          </Reveal>
         </div>
       </section>
 
       {/* CTA */}
       <section className="max-w-5xl mx-auto px-5 py-16 md:py-20 text-center">
-        <h2 className="text-2xl md:text-3xl font-extrabold text-ink mb-4">ዛሬውኑ ይጀምሩ</h2>
-        <p className="text-ink-soft mb-8 max-w-md mx-auto">
-          ኮድ ካገኙ ወደ ካታሎግ ይግቡ። Admin ከሆኑ dashboard ውስጥ ገብተው ነጋዴ ይመዝግቡ።
-        </p>
-        <div className="flex flex-wrap justify-center gap-3">
-          <Link href="/login" className="btn btn-primary">
-            እንደ ነጋዴ ግባ
-          </Link>
-          <Link href="/admin/login" className="btn btn-navy">
-            እንደ አስተዳዳሪ ግባ
-          </Link>
-        </div>
+        <Reveal>
+          <h2 className="text-2xl md:text-3xl font-extrabold text-ink mb-4">ዛሬውኑ ይጀምሩ</h2>
+          <p className="text-ink-soft mb-8 max-w-md mx-auto">
+            ኮድ ካገኙ ወደ ካታሎግ ይግቡ። Admin ከሆኑ dashboard ውስጥ ገብተው ነጋዴ ይመዝግቡ።
+          </p>
+          <div className="flex flex-wrap justify-center gap-3">
+            <Link href="/login" className="btn btn-primary">
+              እንደ ነጋዴ ግባ
+            </Link>
+            <Link href="/admin/login" className="btn btn-navy">
+              እንደ አስተዳዳሪ ግባ
+            </Link>
+          </div>
+        </Reveal>
       </section>
 
       <footer className="border-t border-paper-line py-8 text-center text-sm text-ink-soft">
@@ -198,9 +179,6 @@ export default function Home() {
   useEffect(() => {
     if (!ready) return;
     if (!user) {
-      // No session — show the marketing landing page instead of bouncing
-      // straight to a login form, so first-time visitors understand what
-      // the app does before being asked to authenticate.
       setShowLanding(true);
       return;
     }
